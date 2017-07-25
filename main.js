@@ -7,7 +7,7 @@ const globalShortcut = electron.globalShortcut;
 
 let mainWindow = null;
 
-
+// console.log(window.parent.screen.width);
 
 app.on('window-all-closed', function() {
   if (process.platform != 'darwin')
@@ -15,13 +15,15 @@ app.on('window-all-closed', function() {
 });
 
 app.on('ready', function() {
-
+  const Screen = electron.screen;
+  const size = Screen.getPrimaryDisplay().workAreaSize; // ディスプレイのサイズを取得する
+  console.log(size);
   // ブラウザ(Chromium)の起動, 初期画面のロード
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: size.width,
+    height: size.height,
     frame:false,
-    transparent:true
+    transparent:true,
   });
   mainWindow.loadURL('file://' + __dirname + '/index.html');
   mainWindow.webContents.openDevTools();
