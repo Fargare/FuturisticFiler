@@ -4,6 +4,7 @@ const electron = require('electron');
 const app = electron.app;
 const BrowserWindow = electron.BrowserWindow;
 const globalShortcut = electron.globalShortcut;
+const ipcMain = electron.ipcMain;
 
 let mainWindow = null;
 
@@ -31,7 +32,20 @@ app.on('ready', function() {
   mainWindow.on('closed', function() {
     mainWindow = null;
   });
+
 });
+// const images = [];
+// for (let i = 0 ;i<3;i++){
+//   images.push(new Image());
+// }
+// ipcMain.on('ReadPictures',(event,arg) => {
+//   // arg.src = "folder.png";
+//   for (let i=0;i<3;i++){
+//     images[i].src = 'folder.png';
+//   }
+//   event.sender.send('ReadPictures_reply',images);
+// })
+
 app.on('ready', () => {
   globalShortcut.register('esc', () => {
     app.quit();

@@ -22,6 +22,8 @@ let current_files = [];
 let current_num = 0;
 let fs = require('fs');
 
+const ipcRenderer = require('electron').ipcRenderer;
+
 readDirectory();
 
 phina.globalize();
@@ -72,46 +74,101 @@ phina.define('MainScene', {
       fontSize:50,
     }).addChildTo(this);
 
-    this.img = new Image();
 
     // this.img.src = path+current_files[current_num];
     // console.log(this.img.src);
-    this.space = Sprite('bg',image_size,image_size).addChildTo(this);
-    this.folder = Label({
-      text :"",
-      x:this.space.width/2,
-      y:this.space.height/2,
-      fill:'white',
-      fontFamily:'Century Gothic',
-      fontSize:50,
-    }).addChildTo(this.space);
-    this.filename = Label({
-      text :"test",
-      x:this.space.width/2,
-      y:this.space.height + 20,
-      fill:'white',
-      fontFamily:'Century Gothic',
-      fontSize:30,
-    }).addChildTo(this.space);
 
+    //
+    // this.space = Sprite('bg',image_size,image_size).addChildTo(this);
+    // console.log(this.space.x,this.space.y);
+    // this.space.x = this.gridX.center();
+    // this.space.y = this.gridY.center(4);
+    //
+    // this.folder = Label({
+    //   text :"",
+    //   x:0,
+    //   y:this.space.height/2,
+    //   fill:'white',
+    //   fontFamily:'Century Gothic',
+    //   fontSize:40,
+    // }).addChildTo(this.space);
+    // this.filename = Label({
+    //   text :"test",
+    //   x:0,
+    //   y:this.space.height + 20,
+    //   fill:'white',
+    //   fontFamily:'Century Gothic',
+    //   fontSize:30,
+    // }).addChildTo(this.space);
+
+    // this.img = new Image();
+
+    this.spaces = [];
+    this.folders = [];
+    this.filenames = [];
+    this.images = [];
+    const self = this;
+
+    for (let i= 0;i<3;i++){
+      console.log(i);
+      this.images.push(new Image());
+      this.images[i].src = "";
+      this.images[i].onload = function(){
+          console.log(this.src);
+      };
+      this.spaces.push(Sprite('bg',image_size,image_size).addChildTo(this))
+      this.spaces[i].x = this.gridX.center(-4+i*4);
+      this.folders.push(Label({
+        text :"",
+        x:0,
+        y:this.spaces[i].height/2,
+        fill:'white',
+        fontFamily:'Century Gothic',
+        fontSize:40,
+      }).addChildTo(this.spaces[i]));
+      this.filenames.push(Label({
+        text :"test",
+        x:0,
+        y:this.spaces[i].height + 20,
+        fill:'white',
+        fontFamily:'Century Gothic',
+        fontSize:30,
+      }).addChildTo(this.spaces[i]));
+      this.spaces[i].draw = function(canvas){
+        let width = image_size;
+        let height = image_size;
+        if (self.images[i].width>self.images[i].height){
+          height = image_size * (self.images[i].height/self.images[i].width);
+        }
+        else{
+          width = image_size * (self.images[i].width/self.images[i].height);
+        }
+        canvas.context.drawImage(self.images[i],-width/2,image_size/2-height/2,width,height);
+      }
+    }
+    //
+    // this.space.draw = function(canvas){
+    //   let width = image_size;
+    //   let height = image_size;
+    //   if (self.img.width>self.img.height){
+    //     height = image_size * (self.img.height/self.img.width);
+    //   }
+    //   else{
+    //     width = image_size * (self.img.width/self.img.height);
+    //   }
+    //   canvas.context.drawImage(self.img,-width/2,image_size/2-height/2,width,height);
+    // }
     readPicture(this);
 
-    const self = this;
-    this.space.draw = function(canvas){
-      let width = image_size;
-      let height = image_size;
-      if (self.img.width>self.img.height){
-        height = image_size * (self.img.height/self.img.width);
-      }
-      else{
-        width = image_size * (self.img.width/self.img.height);
-      }
-      canvas.context.drawImage(self.img,image_size/2-width/2,image_size/2-height/2,width,height);
-    }
     this.count = 2;
 
   },
   update:function(app){
+    // ipcRenderer.on('ReadPictures_reply', (event, arg) => {
+    //   this.images = arg;
+    // })
+    // console.log('update');
+
     const self = this;
     if(this.count ==0){
       this.circle.tweener.clear()
@@ -135,51 +192,73 @@ phina.define('MainScene', {
       this.count = 2;
     }
     const key = app.keyboard;
-    if (!this.space.tweener.playing){//キーボード入力はじめ
+    const tweener_playing = (
+      this.spaces[0].tweener.playing
+      ||this.spaces[1].tweener.playing
+      ||this.spaces[2].tweener.playing
+    )
+    if (!tweener_playing){//キーボード入力はじめ
       if (key.getKey('left')){
-        this.space.tweener.clear()
-        .to({
-          alpha:0,
-        },100)
-        .call(function(){
-          current_num = (current_num+current_files.length-1)%current_files.length;
-          readPicture(self);
-        })
-        .to({
-          alpha:1,
-        },100)
-        .setLoop(false);
+        // ipcRenderer.send('ReadPictures',this.images[0]);
+        // console.log(this.images[0].src);
+        // this.images[0].src = "folder.png";
+
+        for (let i= 0;i<3;i++){
+          this.spaces[i].tweener.clear()
+          .by({
+            x:450,
+            // alpha:-0.5,
+          },200)
+          .set({
+            x:this.gridX.center(-4+i*4),
+          })
+          .call(function(){
+            if (i ==0){
+              current_num = (current_num+current_files.length-1)%current_files.length;
+              readPicture(self);
+            }
+          })
+          .setLoop(false);
+        }
       };
       if (key.getKey('right')){
-        this.space.tweener.clear()
-        .to({
-          alpha:0,
-        },100)
-        .call(function(){
-          current_num = (current_num+1)%current_files.length;
-          readPicture(self);
-        })
-        .to({
-          alpha:1,
-        },100)
-        .setLoop(false);
+        for (let i= 0;i<3;i++){
+          this.spaces[i].tweener.clear()
+          .by({
+            x:-450,
+            // alpha:-0.5,
+          },200)
+          .set({
+            x:this.gridX.center(-4+i*4),
+          })
+          .call(function(){
+            if (i ==0){
+              current_num = (current_num+1)%current_files.length;
+              readPicture(self);
+            }
+          })
+          .setLoop(false);
+        }
+
       };
       if (key.getKey('up')){
-        current_path.pop();
-        readDirectory();
-        this.space.tweener.clear()
-        .to({
-          alpha:0,
-        },100)
-        .call(function(){
-          current_num = 0;
-          readPicture(self);
-          self.label.text = path;
-        })
-        .to({
-          alpha:1,
-        },100)
-        .setLoop(false);
+        if (current_path.length !=1){
+          current_path.pop();
+          readDirectory();
+          this.spaces[0].tweener.clear()
+          .to({
+            alpha:0,
+          },100)
+          .call(function(){
+            current_num = 0;
+            readPicture(self);
+            self.label.text = path;
+          })
+          .to({
+            alpha:1,
+          },100)
+          .setLoop(false);
+        }
       };
       if (key.getKey('down')){
         // console.log(current_files[current_num].match(/\./));
@@ -187,7 +266,7 @@ phina.define('MainScene', {
           // console.log("Folder!!!");
           current_path.push(current_files[current_num]);
           readDirectory();
-          this.space.tweener.clear()
+          this.spaces[0].tweener.clear()
           .to({
             alpha:0,
           },100)
@@ -207,18 +286,26 @@ phina.define('MainScene', {
 
 });
 function readPicture(self){
-  if(!/jpg|JPG|PNG|png/.test(current_files[current_num])){
-    self.img.src = "folder.png";
-    self.folder.text = current_files[current_num];
-    self.filename.text = '';
-    // current_num = (current_num+1)%current_files.length;
-  }
-  else{
-    self.img.src = path+current_files[current_num];
-    self.folder.text = "";
-    self.filename.text = current_files[current_num];
+  console.log('readPicture');
+  for (let i = 0;i<3;i++){
+    if(!/jpg|JPG|PNG|png/.test(current_files[(current_num+current_files.length-1+i)%current_files.length])){
+      self.images[i].src = "folder.png";
+      self.folders[i].text = current_files[(current_num+current_files.length-1+i)%current_files.length];
+      self.filenames[i].text = '';
+      // current_num = (current_num+1)%current_files.length;
+    }
+    else{
+      self.images[i].src = path+current_files[(current_num+current_files.length-1+i)%current_files.length];
+      self.folders[i].text = "";
+      self.filenames[i].text = current_files[(current_num+current_files.length-1+i)%current_files.length];
+    }
   }
 };
+function readAll(self){
+  for (let i =0;i<current_files.length;i++){
+    self.images
+  }
+}
 function readDirectory(){
   path = '';
   current_path.forEach(function(value){
