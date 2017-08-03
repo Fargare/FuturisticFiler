@@ -21,6 +21,7 @@ let path = '';
 let current_files = [];
 let current_num = 0;
 let fs = require('fs');
+let loaded = 0;
 
 const ipcRenderer = require('electron').ipcRenderer;
 
@@ -40,14 +41,14 @@ phina.define('MainScene', {
     this.bg = Sprite("bg",SCREEN_WIDTH,SCREEN_HEIGHT).addChildTo(this);
     this.bg.origin.set(0,0);
 
-    // this.circle = CircleShape({
-    //   x:this.gridX.center(),
-    //   y:this.gridY.center(),
-    //   fill:'transparent',
-    //   stroke:'white',
-    //   strokeWidth:10,
-    //   radius:0,
-    // }).addChildTo(this);
+    this.circle = CircleShape({
+      x:this.gridX.center(),
+      y:this.gridY.center(),
+      fill:'transparent',
+      stroke:'white',
+      strokeWidth:10,
+      radius:0,
+    }).addChildTo(this);
     //
     // this.circle2 = CircleShape({
     //   x:this.gridX.center(5),
@@ -69,6 +70,15 @@ phina.define('MainScene', {
       text:path,
       x:this.gridX.center(),
       y:this.gridY.center(3),
+      fill:'white',
+      fontFamily:'Century Gothic',
+      fontSize:50,
+    }).addChildTo(this);
+
+    this.load = Label({
+      text:(loaded/current_files.length)*100,
+      x:this.gridX.center(),
+      y:this.gridY.center(5),
       fill:'white',
       fontFamily:'Century Gothic',
       fontSize:50,
@@ -108,16 +118,18 @@ phina.define('MainScene', {
     this.filenames = [];
     this.images = [];
     const self = this;
-
+    // readAll(this);
+    // console.log(this.images[0].src);
     for (let i= 0;i<3;i++){
       console.log(i);
-      this.images.push(new Image());
-      this.images[i].src = "";
-      this.images[i].onload = function(){
-          console.log(this.src);
-      };
+      // this.images.push(new Image());
+      // this.images[i].src = "";
+      // this.images[i].onload = function(){
+      //     console.log(this.src);
+      // };
       this.spaces.push(Sprite('bg',image_size,image_size).addChildTo(this))
       this.spaces[i].x = this.gridX.center(-4+i*4);
+      console.log(this.gridX.center());
       this.folders.push(Label({
         text :"",
         x:0,
@@ -135,15 +147,20 @@ phina.define('MainScene', {
         fontSize:30,
       }).addChildTo(this.spaces[i]));
       this.spaces[i].draw = function(canvas){
-        let width = image_size;
-        let height = image_size;
-        if (self.images[i].width>self.images[i].height){
-          height = image_size * (self.images[i].height/self.images[i].width);
+        // console.log(self.images[(current_num+current_files.length-1+i)%current_files.length].src);
+        // console.log(current_files);
+        // console.log(self.images.length);
+        if (current_files.length == self.images.length && current_files.length!=0){
+          let width = image_size;
+          let height = image_size;
+          if (self.images[(current_num+current_files.length-1+i)%current_files.length].width>self.images[(current_num+current_files.length-1+i)%current_files.length].height){
+            height = image_size * (self.images[(current_num+current_files.length-1+i)%current_files.length].height/self.images[(current_num+current_files.length-1+i)%current_files.length].width);
+          }
+          else{
+            width = image_size * (self.images[(current_num+current_files.length-1+i)%current_files.length].width/self.images[(current_num+current_files.length-1+i)%current_files.length].height);
+          }
+          canvas.context.drawImage(self.images[(current_num+current_files.length-1+i)%current_files.length],-width/2,image_size/2-height/2,width,height);
         }
-        else{
-          width = image_size * (self.images[i].width/self.images[i].height);
-        }
-        canvas.context.drawImage(self.images[i],-width/2,image_size/2-height/2,width,height);
       }
     }
     //
@@ -158,12 +175,16 @@ phina.define('MainScene', {
     //   }
     //   canvas.context.drawImage(self.img,-width/2,image_size/2-height/2,width,height);
     // }
+    readAll(this);
+    console.log(this.images.length);
     readPicture(this);
 
     this.count = 2;
 
   },
   update:function(app){
+    // console.log(current_path,current_num,current_files.length);
+    this.load.text = parseInt((loaded/current_files.length)*100);
     // ipcRenderer.on('ReadPictures_reply', (event, arg) => {
     //   this.images = arg;
     // })
@@ -176,7 +197,7 @@ phina.define('MainScene', {
         radius:300,
       },200,"swing")
       .setLoop(false);
-      this.count = 1;
+      this.count = 2;
     }
     else if (this.count==1 && !this.circle.tweener.playing) {
       this.circle2.tweener.clear()
@@ -206,7 +227,7 @@ phina.define('MainScene', {
         for (let i= 0;i<3;i++){
           this.spaces[i].tweener.clear()
           .by({
-            x:450,
+            // x:450,
             // alpha:-0.5,
           },200)
           .set({
@@ -225,7 +246,7 @@ phina.define('MainScene', {
         for (let i= 0;i<3;i++){
           this.spaces[i].tweener.clear()
           .by({
-            x:-450,
+            // x:-450,
             // alpha:-0.5,
           },200)
           .set({
@@ -243,14 +264,19 @@ phina.define('MainScene', {
       };
       if (key.getKey('up')){
         if (current_path.length !=1){
+
           current_path.pop();
           readDirectory();
+
+
           this.spaces[0].tweener.clear()
           .to({
             alpha:0,
           },100)
           .call(function(){
             current_num = 0;
+
+            readAll(self);
             readPicture(self);
             self.label.text = path;
           })
@@ -261,6 +287,13 @@ phina.define('MainScene', {
         }
       };
       if (key.getKey('down')){
+        // this.circle.tweener.clear()
+        // .to({
+        //   scaleY:0.4,
+        //   scaleX:1.4,
+        // },200)
+        // .setLoop(false);
+
         // console.log(current_files[current_num].match(/\./));
         if(!/\./.test(current_files[current_num])){
           // console.log("Folder!!!");
@@ -272,6 +305,7 @@ phina.define('MainScene', {
           },100)
           .call(function(){
             current_num = 0;
+            readAll(self);
             readPicture(self);
             self.label.text = path;
           })
@@ -286,27 +320,48 @@ phina.define('MainScene', {
 
 });
 function readPicture(self){
-  console.log('readPicture');
+  // console.log('readPicture');
   for (let i = 0;i<3;i++){
-    if(!/jpg|JPG|PNG|png/.test(current_files[(current_num+current_files.length-1+i)%current_files.length])){
-      self.images[i].src = "folder.png";
-      self.folders[i].text = current_files[(current_num+current_files.length-1+i)%current_files.length];
-      self.filenames[i].text = '';
-      // current_num = (current_num+1)%current_files.length;
-    }
-    else{
-      self.images[i].src = path+current_files[(current_num+current_files.length-1+i)%current_files.length];
-      self.folders[i].text = "";
-      self.filenames[i].text = current_files[(current_num+current_files.length-1+i)%current_files.length];
-    }
+    // self.images[i].src = path+current_files[(current_num+current_files.length-1+i)%current_files.length];
+    self.folders[i].text = "";
+    self.filenames[i].text = current_files[(current_num+current_files.length-1+i)%current_files.length];
+
+    // if(!/jpg|JPG|PNG|png/.test(current_files[(current_num+current_files.length-1+i)%current_files.length])){
+    //   self.images[i].src = "folder.png";
+    //   self.folders[i].text = current_files[(current_num+current_files.length-1+i)%current_files.length];
+    //   self.filenames[i].text = '';
+    //   // current_num = (current_num+1)%current_files.length;
+    // }
+    // else{
+    //   self.images[i].src = path+current_files[(current_num+current_files.length-1+i)%current_files.length];
+    //   self.folders[i].text = "";
+    //   self.filenames[i].text = current_files[(current_num+current_files.length-1+i)%current_files.length];
+    // }
   }
 };
 function readAll(self){
+  // console.log(path);
+  loaded = 0;
+  self.images = []
   for (let i =0;i<current_files.length;i++){
-    self.images
+    self.images.push(new Image());
+    self.images[i].onload = function(){
+        console.log(this.src);
+        loaded +=1;
+    };
+    if(!/jpg|JPG|PNG|png/.test(current_files[i])){
+      self.images[i].src = "folder.png";
+    }
+    else{
+      self.images[i].src = path+current_files[i];
+      // self.images[i].width = 500;
+      // self.images[i].height = 500;
+
+    }
   }
 }
 function readDirectory(){
+  console.log('start_read');
   path = '';
   current_path.forEach(function(value){
     path += value + '/';
@@ -316,7 +371,7 @@ function readDirectory(){
   fs.readdir(path, function(err,files){
     if (err) throw err;
     Array.prototype.push.apply(current_files,files);
-    console.log(current_files);
+    // console.log(current_files);
     console.log(files);
   });
 }
